@@ -1,0 +1,8 @@
+src_folder="./../../my_packages"
+dataset_folder="/folder/to/your/dataset"
+script_folder="./../../scripts"
+vscode_folder="./../.vscode"
+DRONE_TRACKING_BUILD_TYPE="Release"
+container_name="ros_livox_mav_track"
+image_name="ros-livox-mav-track"
+image_tag="latest"

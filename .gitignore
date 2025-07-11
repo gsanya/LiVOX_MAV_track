@@ -1,0 +1,11 @@
+devel/
+logs/
+build/
+bin/
+lib/
+bags/
+.catkin_tools/
+src/.rosinstall
+src/.rosinstall.bak
+*.params
+**/__pycache__/*

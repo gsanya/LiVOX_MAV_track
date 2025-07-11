@@ -1,0 +1,10 @@
+<launch>
+    <node name="mav_track_node" pkg="mav_track" type="mav_track_node" output="screen" ns="mav_track">
+        <rosparam file="$(find mav_track)/config/mav_track_inside.yaml" command="load"/>
+    </node>
+
+    <node name="octomap_background_builder_node" pkg="mav_track" type="octomap_background_builder_node" output="screen" ns="mav_track">
+        <rosparam file="$(find mav_track)/config/mav_track_inside.yaml" command="load"/>
+    </node>
+
+</launch>

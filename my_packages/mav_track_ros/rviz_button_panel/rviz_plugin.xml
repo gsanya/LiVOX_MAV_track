@@ -1,0 +1,7 @@
+<library path="lib/libbutton_panel">
+  <class name="rviz_button_plugin::ButtonPanel"
+         type="rviz_button_plugin::ButtonPanel"
+         base_class_type="rviz::Panel">
+    <description>Button panel to call services</description>
+  </class>
+</library>

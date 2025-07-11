@@ -1,0 +1,95 @@
+Frequency: 10.0
+
+Frame: world
+
+############################## Point Cloud Filters ##############################
+
+# 0: NoBackground
+# 1: Octomap
+# 2: KriszSegmentation : Not yet implemented
+Background_Model_Type: 1
+
+Octomap_Resolution: 0.5
+Octomap_SearchDepth: 2
+Octomap_Build_Num_Frames: 20
+Octomap_Inflate: true
+
+Filter_Distance_Min: false
+Filter_Distance_Min_Value: 1.0
+Filter_Distance_Max: false
+Filter_Distance_Max_Value: 200.0
+Filter_BBX: true
+#global coordinate system; x:(+:forward/-:backward) y:(+:left/-:right) z:(+:up/-:down)
+Filter_BBX_min: [25.0, -200.0, -0.5]
+Filter_BBX_max: [300.0, 200.0, 100.0]
+
+PCL_Filter_Outlier_Radius: false
+PCL_Filter_Outlier_Radius_Value_RadiusSearch: 1.0
+PCL_Filter_Outlier_Radius_Value_MinNeighborsInRadius: 3
+PCL_Filter_Outlier_Statistical: false
+PCL_Filter_Outlier_Statistical_Value_MeanK: 4
+PCL_Filter_Outlier_Statistical_Value_StddevMulThresh: 1.0
+
+############################# Tracking ##############################
+# 0 : ParticleFilter
+# 1 : EKF
+Tracking_Type: 0
+
+############################## Particle Filter Parameters ##############################
+
+# 0 : OnlyPosition
+# 1 : Delta
+# 2 : ConstVelocity
+# 3 : ConstAcceleration
+# 4 : KFConstantTurnRateWithZVelocity
+
+ParticleFilter_Motion_Model_Type: 3
+
+ParticleFilter_Nparticles: 5000
+ParticleFilter_Predict_Std_Pos: 0.6
+ParticleFilter_Predict_Std_Vel: 0.6
+ParticleFilter_Predict_Std_Acc: 0.1
+ParticleFilter_Sensing_Std: 0.3
+
+ParticleFilter_Initial_Sampling_Zone_Radius: 20.0
+ParticleFilter_Initial_Sampling_Zone_Height: 20.0
+ParticleFilter_Initial_Sampling_Zone_X: 50.0
+ParticleFilter_Initial_Sampling_Zone_Y: 0.0
+ParticleFilter_Initial_Sampling_Zone_Z: 1.0
+ParticleFilter_Velocity_When_Not_Tracked: true
+ParticleFilter_Acceleration_When_Not_Tracked: false
+
+############################## EKF Parameters ##############################
+
+# Catalano et al. params
+# KF_Sigma_Lidar: 0.1
+# KF_Sigma_Acc: 0.1
+# KF_Search_Radius: 0.2
+
+# KF_Motion_Model_Type
+# 0: KFConstVelocity
+# 1: KFConstantTurnRateCatalano
+# 2: KFConstantTurnRate
+# 3: KFConstantTurnRateWithZVelocity
+KF_Motion_Model_Type: 0
+KF_Sigma_Lidar: 0.1
+KF_Sigma_Acc: 0.05
+
+# NNS search radius
+KF_Search_Radius: 3.0
+
+############################### Topic and service names ##############################
+
+Topic_Sub_LidarCloud: /livox/lidar
+Topic_Pub_BgModel: /mav_track/bgmodel
+Topic_Pub_FilteredCloud: /mav_track/filtered_cloud
+Topic_Pub_UAVDistance: /mav_track/uav_distance
+Topic_Pub_UAVMarker: /mav_track/uav_marker
+Topic_Pub_ParticleMarker: /mav_track/particles
+Topic_Pub_FilterBBX: /mav_track/filter_BBX
+
+Service_BuildOctoMap_name: /mav_track/build_octomap_background
+Service_ParticleReset: /mav_track/particle_reset
+Service_KFReset: /mav_track/reset_kf
+
+Service_ScanningMode: /turret_cmd/scanning_mode
