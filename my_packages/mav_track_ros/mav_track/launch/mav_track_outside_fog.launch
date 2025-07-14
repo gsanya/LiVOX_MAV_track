@@ -1,0 +1,17 @@
+<launch>
+
+    <arg name="Vis_Show_GPS" default="false" doc="Visualize GPS data"/>
+
+    <node name="mav_track_node" pkg="mav_track" type="mav_track_node" output="screen" ns="mav_track">
+        <rosparam file="$(find mav_track)/config/mav_track_outside_fog.yaml" command="load"/>
+    </node>
+
+    <node name="octomap_background_builder_node" pkg="mav_track" type="octomap_background_builder_node" output="screen" ns="mav_track">
+        <rosparam file="$(find mav_track)/config/mav_track_outside_fog.yaml" command="load"/>
+    </node>
+
+    <group if="$(arg Vis_Show_GPS)">
+        <node name="gps_visualizer_node" pkg="mav_track" type="gps_visualizer_node" output="screen" ns="mav_track"/>
+    </group>
+
+</launch>

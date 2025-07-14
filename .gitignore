@@ -9,3 +9,5 @@ src/.rosinstall
 src/.rosinstall.bak
 *.params
 **/__pycache__/*
+scripts/results/*
+scripts/figs/*

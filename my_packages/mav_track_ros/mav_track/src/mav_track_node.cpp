@@ -42,7 +42,7 @@ enum BackgroundModelType {
     KriszSegmentation = 2
 };
 
-class UAVTracker {
+class MAVTracker {
   private:
     // ROS NodeHandle
     ros::NodeHandle nh;
@@ -89,8 +89,8 @@ class UAVTracker {
     float particle_filter_sensing_std;
     bool particle_filter_velocity_when_not_tracked;
     bool particle_filter_acceleration_when_not_tracked;
-    std::string topic_UAVDistance;
-    std::string topic_UAVMarker;
+    std::string topic_MAVDistance;
+    std::string topic_MAVMarker;
     std::string topic_ParticleMarker;
     std::string topic_FilterBBX;
     std::string service_ParticleReset;
@@ -106,31 +106,31 @@ class UAVTracker {
     // Octree background model, if BackgroundModelType is Octomap
     octomap::OcTree* bg_model;
     // The point cloud after background subtraction and filtering
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_uav;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_mav;
     // keeps track if new measurement arrived
     bool new_measurement;
-    // Particle filter for UAV tracking (even if not used for tracking)
-    UAVTrackParticleFilter pfUAV;
-    // Kalman filter for UAV tracking
-    UAVTrackKF kfUAV;
-    // estimated UAV pose with velocity
-    visualization_msgs::Marker uav_velocity_marker;
+    // Particle filter for MAV tracking (even if not used for tracking)
+    MAVTrackParticleFilter pfMAV;
+    // Kalman filter for MAV tracking
+    MAVTrackKF kfMAV;
+    // estimated MAV pose with velocity
+    visualization_msgs::Marker mav_velocity_marker;
 
     // Services, subscribers, and publishers
     ros::ServiceClient srv_BuildOctoMap;
     tf::TransformListener transform_listener;
     ros::Subscriber sub_LidarCloud;
     ros::Publisher pub_FilteredCloud;
-    ros::Publisher pub_UAVDistance;
-    ros::Publisher pub_UAVMarker;
+    ros::Publisher pub_MAVDistance;
+    ros::Publisher pub_MAVMarker;
     ros::Publisher pub_ParticleMarker;
     ros::Publisher pub_FilterBBX;
     ros::ServiceServer srv_ParticleReset;
     ros::ServiceServer srv_KFReset;
     
   public:
-    UAVTracker();
-    ~UAVTracker();
+    MAVTracker();
+    ~MAVTracker();
 
     // Callbacks
     void callback_LidarCloud(const sensor_msgs::PointCloud2::ConstPtr& msg);
@@ -141,7 +141,7 @@ class UAVTracker {
     void publish_FilteredCloud();
     void publish_ParticleMarker();
     void publish_BoundingBox();
-    void publish_UAV(bool is_tracked = true);
+    void publish_MAV(bool is_tracked = true);
 
     // Service calls
     bool call_service_BuildOctoMap(int num_frames);
@@ -151,7 +151,7 @@ class UAVTracker {
     void execute();
 };
 
-UAVTracker::UAVTracker() : nh("~") {
+MAVTracker::MAVTracker() : nh("~") {
     // Initialize parameters
     frequency = 10.0;
     frame = "world";
@@ -172,8 +172,8 @@ UAVTracker::UAVTracker() : nh("~") {
     pcl_filter_outlier_statistical_value_MeanK = 4;
     pcl_filter_outlier_statistical_value_StddevMulThresh = 1.0;
     topic_FilteredCloud = "/mav_track/filtered_cloud";
-    topic_UAVDistance = "/mav_track/uav_distance";
-    topic_UAVMarker = "/mav_track/uav_marker";    
+    topic_MAVDistance = "/mav_track/mav_distance";
+    topic_MAVMarker = "/mav_track/mav_marker";    
     topic_FilterBBX = "/mav_track/filter_BBX";
     
     nh.getParam("Frequency", frequency);
@@ -197,11 +197,11 @@ UAVTracker::UAVTracker() : nh("~") {
     nh.getParam("Background_Model_Type", background_model_type_int);
     background_model_type = static_cast<BackgroundModelType>(background_model_type_int);
     nh.getParam("Topic_Pub_FilteredCloud", topic_FilteredCloud);
-    nh.getParam("Topic_Pub_UAVDistance", topic_UAVDistance);
-    nh.getParam("Topic_Pub_UAVMarker", topic_UAVMarker);
+    nh.getParam("Topic_Pub_MAVDistance", topic_MAVDistance);
+    nh.getParam("Topic_Pub_MAVMarker", topic_MAVMarker);
     nh.getParam("Topic_Pub_FilterBBX", topic_FilterBBX);
    
-    ROS_INFO_STREAM("UAVTracker Params:");
+    ROS_INFO_STREAM("MAVTracker Params:");
     ROS_INFO_STREAM("  Frequency: " << frequency);
     ROS_INFO_STREAM("  Frame: " << frame);
     ROS_INFO_STREAM("  Topic_Sub_LidarCloud: " << topic_LidarCloud);
@@ -227,8 +227,8 @@ UAVTracker::UAVTracker() : nh("~") {
     ROS_INFO_STREAM("  PCL_Filter_Outlier_Statistical_Value_StddevMulThresh: " << pcl_filter_outlier_statistical_value_StddevMulThresh);
     ROS_INFO_STREAM("  BackgroundModelType: " << background_model_type);
     ROS_INFO_STREAM("  Topic_Pub_FilteredCloud: " << topic_FilteredCloud);
-    ROS_INFO_STREAM("  Topic_Pub_UAVDistance: " << topic_UAVDistance);
-    ROS_INFO_STREAM("  Topic_Pub_UAVMarker: " << topic_UAVMarker);
+    ROS_INFO_STREAM("  Topic_Pub_MAVDistance: " << topic_MAVDistance);
+    ROS_INFO_STREAM("  Topic_Pub_MAVMarker: " << topic_MAVMarker);
     ROS_INFO_STREAM("  Topic_Pub_FilterBBX: " << topic_FilterBBX);
 
     int queue_sub = 1;
@@ -324,28 +324,28 @@ UAVTracker::UAVTracker() : nh("~") {
         ROS_INFO_STREAM("  Service_ParticleReset: " << service_ParticleReset);
 
         // Initialize particle filter
-        pfUAV.set_Nparticles(particle_filter_Nparticles);
-        pfUAV.set_initial_sampling_zone(
+        pfMAV.set_Nparticles(particle_filter_Nparticles);
+        pfMAV.set_initial_sampling_zone(
             particle_filter_initial_sampling_zone_radius,
             particle_filter_initial_sampling_zone_height,
             particle_filter_initial_sampling_zone_x,
             particle_filter_initial_sampling_zone_y,
             particle_filter_initial_sampling_zone_z);
-        pfUAV.set_default_predict_std(
+        pfMAV.set_default_predict_std(
             particle_filter_predict_std_pos,
             particle_filter_predict_std_vel,
             particle_filter_predict_std_acc);
-        pfUAV.set_default_sensing_std(particle_filter_sensing_std);
-        pfUAV.set_motion_model_type(
+        pfMAV.set_default_sensing_std(particle_filter_sensing_std);
+        pfMAV.set_motion_model_type(
             particle_filter_motion_model_type,
             particle_filter_velocity_when_not_tracked,
             particle_filter_acceleration_when_not_tracked);
-        pfUAV.set_frame(frame);
-        pfUAV.set_frequency(frequency);
-        pfUAV.particles_initialize();
+        pfMAV.set_frame(frame);
+        pfMAV.set_frequency(frequency);
+        pfMAV.particles_initialize();
 
         pub_ParticleMarker = nh.advertise<visualization_msgs::Marker>(topic_ParticleMarker, queue_pub);
-        srv_ParticleReset = nh.advertiseService(service_ParticleReset, &UAVTracker::callback_ParticleReset, this);
+        srv_ParticleReset = nh.advertiseService(service_ParticleReset, &MAVTracker::callback_ParticleReset, this);
     } else if (tracking_type == EKF) {
         ROS_INFO_STREAM("Tracking type: EKF");
         // Initialize parameters
@@ -390,7 +390,7 @@ UAVTracker::UAVTracker() : nh("~") {
 
             Eigen::MatrixXd Q_in = Eigen::MatrixXd::Identity(6,6) * KF_sigma_acc * KF_sigma_acc;
 
-            kfUAV.init(x_in, P_in, F_in, H_in, R_in, Q_in, KF_search_radius, KF_motion_model_type ,frame, KF_dogru_use_min_search_radius);
+            kfMAV.init(x_in, P_in, F_in, H_in, R_in, Q_in, KF_search_radius, KF_motion_model_type ,frame, KF_dogru_use_min_search_radius);
 
         } else if (KF_motion_model_type == KFConstantTurnRate || KF_motion_model_type == KFConstantTurnRateCatalano) {
             ROS_INFO_STREAM("  KF_Motion_Model_Type: KFConstantTurnRate");
@@ -424,7 +424,7 @@ UAVTracker::UAVTracker() : nh("~") {
 
             Eigen::MatrixXd Q_in = Eigen::MatrixXd::Identity(6,6) * KF_sigma_acc * KF_sigma_acc;
 
-            kfUAV.init(x_in, P_in, F_in, H_in, R_in, Q_in, KF_search_radius, KF_motion_model_type ,frame);
+            kfMAV.init(x_in, P_in, F_in, H_in, R_in, Q_in, KF_search_radius, KF_motion_model_type ,frame);
         } else if (KF_motion_model_type == KFConstantTurnRateWithZVelocity) {
             ROS_INFO_STREAM("  KF_Motion_Model_Type: KFConstantTurnRateAndVelocity");
             Eigen::VectorXd x_in = Eigen::VectorXd::Zero(7);
@@ -448,11 +448,11 @@ UAVTracker::UAVTracker() : nh("~") {
             // Process noise covariance
             Eigen::MatrixXd Q_in = Eigen::MatrixXd::Identity(7,7) * KF_sigma_acc * KF_sigma_acc;
 
-            kfUAV.init(x_in, P_in, F_in, H_in, R_in, Q_in, KF_search_radius, KF_motion_model_type ,frame);
+            kfMAV.init(x_in, P_in, F_in, H_in, R_in, Q_in, KF_search_radius, KF_motion_model_type ,frame);
         } else {
             ROS_ERROR_STREAM("  KF_Motion_Model_Type: Unknown motion model type");
         }
-        srv_KFReset = nh.advertiseService(service_KFReset, &UAVTracker::callback_KFReset, this);
+        srv_KFReset = nh.advertiseService(service_KFReset, &MAVTracker::callback_KFReset, this);
     }
 
     // Initialize the background model
@@ -469,7 +469,7 @@ UAVTracker::UAVTracker() : nh("~") {
     }
 
     // Initialize variables
-    cloud_uav.reset(new pcl::PointCloud<pcl::PointXYZ>());
+    cloud_mav.reset(new pcl::PointCloud<pcl::PointXYZ>());
     new_measurement = false;
 
     if (filter_BBX){
@@ -479,17 +479,17 @@ UAVTracker::UAVTracker() : nh("~") {
     }
 
     // Services, subscribers, and publishers
-    sub_LidarCloud = nh.subscribe<sensor_msgs::PointCloud2>(topic_LidarCloud, queue_sub, &UAVTracker::callback_LidarCloud, this);
+    sub_LidarCloud = nh.subscribe<sensor_msgs::PointCloud2>(topic_LidarCloud, queue_sub, &MAVTracker::callback_LidarCloud, this);
     pub_FilteredCloud = nh.advertise<sensor_msgs::PointCloud2>(topic_FilteredCloud, queue_pub);
-    pub_UAVDistance = nh.advertise<jsk_rviz_plugins::OverlayText>(topic_UAVDistance, queue_pub);
-    pub_UAVMarker = nh.advertise<visualization_msgs::Marker>(topic_UAVMarker, queue_pub);
+    pub_MAVDistance = nh.advertise<jsk_rviz_plugins::OverlayText>(topic_MAVDistance, queue_pub);
+    pub_MAVMarker = nh.advertise<visualization_msgs::Marker>(topic_MAVMarker, queue_pub);
     pub_FilterBBX = nh.advertise<visualization_msgs::Marker>(topic_FilterBBX, queue_pub);
 
     // Print ROS info message
     ROS_INFO_STREAM("mav_tracker initialization finished.\n-----------------------------------------");
 }
 
-UAVTracker::~UAVTracker() {
+MAVTracker::~MAVTracker() {
     // see https://github.com/OctoMap/octomap_mapping
     if (bg_model) {
         bg_model->clear();
@@ -498,7 +498,7 @@ UAVTracker::~UAVTracker() {
     }
 }
 
-bool UAVTracker::call_service_BuildOctoMap(int num_frames) {
+bool MAVTracker::call_service_BuildOctoMap(int num_frames) {
     ZoneScoped;
     mav_track::BuildOctoMapBackground srv;
     srv.request.num_frames = num_frames;
@@ -526,8 +526,8 @@ bool UAVTracker::call_service_BuildOctoMap(int num_frames) {
     return false;
 }
 
-// Filter the point cloud and publish the potential UAV cloud
-void UAVTracker::callback_LidarCloud(const sensor_msgs::PointCloud2::ConstPtr& msg) {
+// Filter the point cloud and publish the potential MAV cloud
+void MAVTracker::callback_LidarCloud(const sensor_msgs::PointCloud2::ConstPtr& msg) {
     ZoneScoped;
     // first check if transform of cloud is available
     {
@@ -543,8 +543,8 @@ void UAVTracker::callback_LidarCloud(const sensor_msgs::PointCloud2::ConstPtr& m
     {
         ZoneScopedN("clear");
         // subtract background from pointcloud
-        cloud_uav->clear();
-        cloud_uav->header.frame_id = frame;
+        cloud_mav->clear();
+        cloud_mav->header.frame_id = frame;
     }
 
     // if filter_distance is used, calculate min and max distance (only if pcl_filter_BBX is not used)
@@ -597,53 +597,53 @@ void UAVTracker::callback_LidarCloud(const sensor_msgs::PointCloud2::ConstPtr& m
                 if (onode != NULL && bg_model->isNodeOccupied(onode))
                     add_point = false;
                 if (add_point)
-                    cloud_uav->push_back(pcl::PointXYZ(it[0], it[1], it[2]));
+                    cloud_mav->push_back(pcl::PointXYZ(it[0], it[1], it[2]));
             } else {
-                cloud_uav->push_back(pcl::PointXYZ(it[0], it[1], it[2]));
+                cloud_mav->push_back(pcl::PointXYZ(it[0], it[1], it[2]));
             }
         }
     }
     // filter: RadiusOutlierRemoval
-    if (pcl_filter_outlier_radius && cloud_uav->size() > 0) {
+    if (pcl_filter_outlier_radius && cloud_mav->size() > 0) {
         // remove outliers by radius
         pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
         // build the filter
-        outrem.setInputCloud(cloud_uav);
+        outrem.setInputCloud(cloud_mav);
         outrem.setRadiusSearch(pcl_filter_outlier_radius_value_RadiusSearch);
         outrem.setMinNeighborsInRadius(pcl_filter_outlier_radius_value_MinNeighborsInRadius);
         // apply filter
-        outrem.filter(*cloud_uav);
+        outrem.filter(*cloud_mav);
     }
 
     // filter: StatisticalOutlierRemoval
-    if (pcl_filter_outlier_statistical && cloud_uav->size() > 0) {
+    if (pcl_filter_outlier_statistical && cloud_mav->size() > 0) {
         // see https://pointclouds.org/documentation/group__filters.html
         pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sorfilter;
-        sorfilter.setInputCloud(cloud_uav);
+        sorfilter.setInputCloud(cloud_mav);
         sorfilter.setMeanK(pcl_filter_outlier_statistical_value_MeanK);
         sorfilter.setStddevMulThresh(pcl_filter_outlier_statistical_value_StddevMulThresh);
-        sorfilter.filter(*cloud_uav);
+        sorfilter.filter(*cloud_mav);
     }
 
     // set variable if new measurement arrived
-    if (cloud_uav->size() > 0){
+    if (cloud_mav->size() > 0){
         publish_FilteredCloud();
         new_measurement = true;
     }
 }
 
 // reset particles of filter
-bool UAVTracker::callback_ParticleReset(std_srvs::TriggerRequest& req, std_srvs::TriggerResponse& res) {
+bool MAVTracker::callback_ParticleReset(std_srvs::TriggerRequest& req, std_srvs::TriggerResponse& res) {
     ZoneScoped;
     // req is empty in trigger request
     res.message = "Triggered particle reset.";
-    pfUAV.particles_initialize();
+    pfMAV.particles_initialize();
     res.success = true;
     return true;
 }
 
 // reset Kalman filter
-bool UAVTracker::callback_KFReset(std_srvs::TriggerRequest& req, std_srvs::TriggerResponse& res) {
+bool MAVTracker::callback_KFReset(std_srvs::TriggerRequest& req, std_srvs::TriggerResponse& res) {
     ZoneScoped;
     // req is empty in trigger request
     res.message = "Triggered Kalman Filter reset.";
@@ -664,7 +664,7 @@ bool UAVTracker::callback_KFReset(std_srvs::TriggerRequest& req, std_srvs::Trigg
 
         Eigen::MatrixXd Q_in = Eigen::MatrixXd::Identity(6,6) * KF_sigma_acc * KF_sigma_acc;
 
-        kfUAV.init(x_in, P_in, F_in, H_in, R_in, Q_in, KF_search_radius, KF_motion_model_type ,frame, KF_dogru_use_min_search_radius);
+        kfMAV.init(x_in, P_in, F_in, H_in, R_in, Q_in, KF_search_radius, KF_motion_model_type ,frame, KF_dogru_use_min_search_radius);
     } else if (KF_motion_model_type == KFConstantTurnRate || KF_motion_model_type == KFConstantTurnRateCatalano) {
         Eigen::VectorXd x_in = Eigen::VectorXd::Zero(6);
         x_in << 0, 0, 0, 0, 0, 0;
@@ -698,7 +698,7 @@ bool UAVTracker::callback_KFReset(std_srvs::TriggerRequest& req, std_srvs::Trigg
 
         Eigen::MatrixXd Q_in = Eigen::MatrixXd::Identity(6,6) * KF_sigma_acc * KF_sigma_acc;
 
-        kfUAV.init(x_in, P_in, F_in, H_in, R_in, Q_in, KF_search_radius, KF_motion_model_type ,frame);
+        kfMAV.init(x_in, P_in, F_in, H_in, R_in, Q_in, KF_search_radius, KF_motion_model_type ,frame);
     } else if (KF_motion_model_type == KFConstantTurnRateWithZVelocity) {
         Eigen::VectorXd x_in = Eigen::VectorXd::Zero(7);
         x_in << 0, 0, 0, 0, 0, 0, 0;
@@ -721,7 +721,7 @@ bool UAVTracker::callback_KFReset(std_srvs::TriggerRequest& req, std_srvs::Trigg
         // Process noise covariance
         Eigen::MatrixXd Q_in = Eigen::MatrixXd::Identity(7,7) * KF_sigma_acc * KF_sigma_acc;
 
-        kfUAV.init(x_in, P_in, F_in, H_in, R_in, Q_in, KF_search_radius, KF_motion_model_type ,frame);
+        kfMAV.init(x_in, P_in, F_in, H_in, R_in, Q_in, KF_search_radius, KF_motion_model_type ,frame);
     } else {
         ROS_ERROR_STREAM("KF_Motion_Model_Type: Unknown motion model type");
     }
@@ -730,52 +730,52 @@ bool UAVTracker::callback_KFReset(std_srvs::TriggerRequest& req, std_srvs::Trigg
     return true;
 }
 
-void UAVTracker::publish_FilteredCloud() {
+void MAVTracker::publish_FilteredCloud() {
     ZoneScoped;
     sensor_msgs::PointCloud2 message;
-    pcl::toROSMsg(*cloud_uav, message);
+    pcl::toROSMsg(*cloud_mav, message);
     message.header.stamp=ros::Time::now();
     pub_FilteredCloud.publish(message);
 }
 
-void UAVTracker::publish_UAV(bool is_tracked) {
+void MAVTracker::publish_MAV(bool is_tracked) {
     ZoneScoped;
-    visualization_msgs::Marker uav_model_marker;
-    uav_model_marker.header = uav_velocity_marker.header;
-    uav_model_marker.ns = "uav_model";
-    uav_model_marker.id = 0;
-    uav_model_marker.type = visualization_msgs::Marker::MESH_RESOURCE;
-    uav_model_marker.action = visualization_msgs::Marker::ADD;
-    uav_model_marker.pose.position = uav_velocity_marker.points[0];
-    uav_model_marker.pose.orientation.w = 1.0;
-    uav_model_marker.mesh_resource = "package://rotors_description/meshes/firefly.dae";
-    uav_model_marker.mesh_use_embedded_materials = true;
-    uav_model_marker.scale.x = 1.0;
-    uav_model_marker.scale.y = 1.0;
-    uav_model_marker.scale.z = 1.0;
+    visualization_msgs::Marker mav_model_marker;
+    mav_model_marker.header = mav_velocity_marker.header;
+    mav_model_marker.ns = "mav_model";
+    mav_model_marker.id = 0;
+    mav_model_marker.type = visualization_msgs::Marker::MESH_RESOURCE;
+    mav_model_marker.action = visualization_msgs::Marker::ADD;
+    mav_model_marker.pose.position = mav_velocity_marker.points[0];
+    mav_model_marker.pose.orientation.w = 1.0;
+    mav_model_marker.mesh_resource = "package://mav_track/meshes/firefly.dae";
+    mav_model_marker.mesh_use_embedded_materials = true;
+    mav_model_marker.scale.x = 1.0;
+    mav_model_marker.scale.y = 1.0;
+    mav_model_marker.scale.z = 1.0;
     
     // if not tracked, we publish the new model and velocity with alpha set to 0.0
     // so that the model and velocity vector is not visible in rviz
     std::string is_tracked_str = "";
     if (is_tracked) {
         // set alpha to 0.0 if not tracked 
-        uav_velocity_marker.color.a = 1.0;
-        uav_model_marker.color.a = 1.0;
+        mav_velocity_marker.color.a = 1.0;
+        mav_model_marker.color.a = 1.0;
         is_tracked_str = " (tracked)";
     } else {
-        uav_velocity_marker.color.a = 0.0;
-        uav_model_marker.color.a = 0.0;
+        mav_velocity_marker.color.a = 0.0;
+        mav_model_marker.color.a = 0.0;
         is_tracked_str = " (not tracked)";
     }
 
-    pub_UAVMarker.publish(uav_model_marker);
+    pub_MAVMarker.publish(mav_model_marker);
 
     jsk_rviz_plugins::OverlayText mav_distance_msg = jsk_rviz_plugins::OverlayText();
     std::stringstream ss;
-    ss << "UAV distance: " << 
-        sqrt(pow(uav_velocity_marker.points[0].x,2)
-        + pow(uav_velocity_marker.points[0].y,2)
-        + pow(uav_velocity_marker.points[0].z,2)) << " m" << is_tracked_str;
+    ss << "MAV distance: " << 
+        sqrt(pow(mav_velocity_marker.points[0].x,2)
+        + pow(mav_velocity_marker.points[0].y,2)
+        + pow(mav_velocity_marker.points[0].z,2)) << " m" << is_tracked_str;
     mav_distance_msg.text = ss.str();
     mav_distance_msg.top = 0;
     mav_distance_msg.left = 0;
@@ -788,27 +788,27 @@ void UAVTracker::publish_UAV(bool is_tracked) {
     mav_distance_msg.height = 100;
     mav_distance_msg.text_size = 20;
 
-    pub_UAVDistance.publish(mav_distance_msg);
+    pub_MAVDistance.publish(mav_distance_msg);
 
     if (tracking_type == EKF) {
-        uav_velocity_marker.ns = "uav_velocity";
-        uav_velocity_marker.id = 1;
-        pub_UAVMarker.publish(uav_velocity_marker);
+        mav_velocity_marker.ns = "mav_velocity";
+        mav_velocity_marker.id = 1;
+        pub_MAVMarker.publish(mav_velocity_marker);
     } else if (tracking_type == ParticleFilter) {
         if (particle_filter_motion_model_type != OnlyPosition) {
-            uav_velocity_marker.ns = "uav_velocity";
-            uav_velocity_marker.id = 1;
-            pub_UAVMarker.publish(uav_velocity_marker);
+            mav_velocity_marker.ns = "mav_velocity";
+            mav_velocity_marker.id = 1;
+            pub_MAVMarker.publish(mav_velocity_marker);
         }
     }
 }
 
-void UAVTracker::publish_ParticleMarker() {
+void MAVTracker::publish_ParticleMarker() {
     ZoneScoped;
-    pub_ParticleMarker.publish(pfUAV.getParticleMarker());
+    pub_ParticleMarker.publish(pfMAV.getParticleMarker());
 }
 
-void UAVTracker::publish_BoundingBox() {
+void MAVTracker::publish_BoundingBox() {
     ZoneScoped;
     visualization_msgs::Marker marker;
     marker.header.frame_id = "world";
@@ -836,7 +836,7 @@ void UAVTracker::publish_BoundingBox() {
     pub_FilterBBX.publish(marker);
 }
 
-void UAVTracker::execute(){
+void MAVTracker::execute(){
     ZoneScoped;
     // Main execution
     // The tracker runs with set frequency
@@ -845,10 +845,10 @@ void UAVTracker::execute(){
         //predict particles
         // pretty much add a random number from the normal distribution with 
         // 0 mean and predict_std std to each particle coordinate along each axle
-        pfUAV.particles_predict();
+        pfMAV.particles_predict();
     // only start prediction if the first measurement has been received
-    } else if (tracking_type == EKF && !kfUAV.is_first_measurement()) {
-        kfUAV.predictEKF(1.0/frequency);
+    } else if (tracking_type == EKF && !kfMAV.is_first_measurement()) {
+        kfMAV.predictEKF(1.0/frequency);
     }
 
     
@@ -859,18 +859,18 @@ void UAVTracker::execute(){
         if (tracking_type == ParticleFilter) {
             // update weights and resample
             // find nearest measurement point. Update weight based on distance to nearest point than normalize weights
-            pfUAV.particles_update(cloud_uav);
+            pfMAV.particles_update(cloud_mav);
             new_measurement = false;
         } else if (tracking_type == EKF) {
             // update the Kalman filter with the new measurement
             // check if its the first measurement, if so, set the first measurement
-            if (kfUAV.is_first_measurement()) {
-                kfUAV.set_first_measurement(cloud_uav);
+            if (kfMAV.is_first_measurement()) {
+                kfMAV.set_first_measurement(cloud_mav);
                 /// TODO: check if update should be called here
                 new_measurement = false;
                 return;
             }
-            kfUAV.update(cloud_uav);
+            kfMAV.update(cloud_mav);
             new_measurement = false;
         }
     }
@@ -878,19 +878,19 @@ void UAVTracker::execute(){
     if (tracking_type == ParticleFilter) {
         // get new estimate
         // calculates the average of the particle positions
-        uav_velocity_marker = pfUAV.getEstimate();
+        mav_velocity_marker = pfMAV.getEstimate();
     } else if (tracking_type == EKF) {
         // get new estimate
-        uav_velocity_marker = kfUAV.getEstimate();
+        mav_velocity_marker = kfMAV.getEstimate();
     }
 
     bool is_tracked = false;
     if (tracking_type == ParticleFilter) {
-        is_tracked = pfUAV.get_is_tracked();
+        is_tracked = pfMAV.get_is_tracked();
     } else if (tracking_type == EKF) {
-        is_tracked = kfUAV.get_is_tracked();
+        is_tracked = kfMAV.get_is_tracked();
     }
-    publish_UAV(is_tracked);
+    publish_MAV(is_tracked);
 
     if (tracking_type == ParticleFilter) {
         publish_ParticleMarker();
@@ -901,7 +901,7 @@ void UAVTracker::execute(){
     }
 }
 
-void UAVTracker::loop() {
+void MAVTracker::loop() {
     // Main loop
     while (nh.ok()) {
         // Check for new messages
@@ -918,7 +918,7 @@ void UAVTracker::loop() {
 int main(int argc, char **argv) {   
     ros::init(argc,argv,"mav_track_node");
 
-    UAVTracker mav_track;
+    MAVTracker mav_track;
 
     mav_track.loop();
 

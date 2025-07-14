@@ -6,7 +6,7 @@
 
 #include "mav_track/mav_track_particlefilter.hpp"
 
-UAVTrackParticle::UAVTrackParticle() {
+MAVTrackParticle::MAVTrackParticle() {
     // position (state of particle)
     position.x = 0.0;
     position.y = 0.0;
@@ -26,13 +26,13 @@ UAVTrackParticle::UAVTrackParticle() {
     weight = 0.0;
 }
 
-UAVTrackParticle::UAVTrackParticle(geometry_msgs::Point position,geometry_msgs::Point velocity, double weight) {
+MAVTrackParticle::MAVTrackParticle(geometry_msgs::Point position,geometry_msgs::Point velocity, double weight) {
     this->position = position;
     this->velocity = velocity;
     this->weight = weight;
 }
 
-UAVTrackParticleFilter::UAVTrackParticleFilter() {
+MAVTrackParticleFilter::MAVTrackParticleFilter() {
     // Parameters
     frame = "world";
     Nparticles = 1000;
@@ -65,22 +65,22 @@ UAVTrackParticleFilter::UAVTrackParticleFilter() {
     velocity_estimate.z = 0.0;
     
     // Marker
-    uav_pose_marker.header.frame_id = frame;
-    uav_pose_marker.type = visualization_msgs::Marker::ARROW;
-    uav_pose_marker.action = visualization_msgs::Marker::ADD;
+    mav_pose_marker.header.frame_id = frame;
+    mav_pose_marker.type = visualization_msgs::Marker::ARROW;
+    mav_pose_marker.action = visualization_msgs::Marker::ADD;
 
-    uav_pose_marker.points.resize(2);
-    uav_pose_marker.points[0].x = 0.0;
-    uav_pose_marker.points[0].y = 0.0;
-    uav_pose_marker.points[0].z = 0.0;
-    uav_pose_marker.points[1].x = 1.0;
-    uav_pose_marker.points[1].y = 1.0;
-    uav_pose_marker.points[1].z = 1.0;
-    uav_pose_marker.scale.x = 0.1;
-    uav_pose_marker.scale.y = 0.1;
-    uav_pose_marker.scale.z = 0.1;
-    uav_pose_marker.color.r = 1.0;
-    uav_pose_marker.color.a = 0.0;
+    mav_pose_marker.points.resize(2);
+    mav_pose_marker.points[0].x = 0.0;
+    mav_pose_marker.points[0].y = 0.0;
+    mav_pose_marker.points[0].z = 0.0;
+    mav_pose_marker.points[1].x = 1.0;
+    mav_pose_marker.points[1].y = 1.0;
+    mav_pose_marker.points[1].z = 1.0;
+    mav_pose_marker.scale.x = 0.1;
+    mav_pose_marker.scale.y = 0.1;
+    mav_pose_marker.scale.z = 0.1;
+    mav_pose_marker.color.r = 1.0;
+    mav_pose_marker.color.a = 0.0;
 
     // Do not forget to call particles_initialize()
     particles_initialized = false;
@@ -89,11 +89,11 @@ UAVTrackParticleFilter::UAVTrackParticleFilter() {
     velocity_when_not_tracked = false;
 }
 
-UAVTrackParticleFilter::~UAVTrackParticleFilter() {
+MAVTrackParticleFilter::~MAVTrackParticleFilter() {
     // nothing yet
 }
 
-void UAVTrackParticleFilter::set_motion_model_type(
+void MAVTrackParticleFilter::set_motion_model_type(
         PFMotionModelType motion_model_type,
         bool velocity_when_not_tracked,
         bool acceleration_not_tracked) {
@@ -103,13 +103,13 @@ void UAVTrackParticleFilter::set_motion_model_type(
     this->acceleration_not_tracked = acceleration_not_tracked;
 }
 
-void UAVTrackParticleFilter::set_Nparticles(int Nparticles) {
+void MAVTrackParticleFilter::set_Nparticles(int Nparticles) {
     ZoneScoped;
     this->Nparticles = Nparticles;
     particles_initialized = false;
 }
 
-void UAVTrackParticleFilter::set_initial_sampling_zone(double radius, double height, double x, double y, double z) {
+void MAVTrackParticleFilter::set_initial_sampling_zone(double radius, double height, double x, double y, double z) {
     ZoneScoped;
     this->initial_sampling_zone_radius = radius;
     this->initial_sampling_zone_height = height;
@@ -119,30 +119,30 @@ void UAVTrackParticleFilter::set_initial_sampling_zone(double radius, double hei
     particles_initialized = false;
 }
 
-void UAVTrackParticleFilter::set_default_predict_std(double std_pos, double std_vel, double std_acc) {
+void MAVTrackParticleFilter::set_default_predict_std(double std_pos, double std_vel, double std_acc) {
     ZoneScoped;
     this->predict_std_pos = std_pos;
     this->predict_std_vel = std_vel;
     this->predict_std_acc = std_acc;
 }
 
-void UAVTrackParticleFilter::set_default_sensing_std(double std) {
+void MAVTrackParticleFilter::set_default_sensing_std(double std) {
     ZoneScoped;
     this->sensing_std = std;
 }
 
-void UAVTrackParticleFilter::set_frame(std::string frame) {
+void MAVTrackParticleFilter::set_frame(std::string frame) {
     ZoneScoped;
     this->frame = frame;
 }
 
-void UAVTrackParticleFilter::set_frequency(double frequency) {
+void MAVTrackParticleFilter::set_frequency(double frequency) {
     ZoneScoped;
     this->frequency = frequency;
     this->delta_time = 1.0 / frequency;
 }
 
-void UAVTrackParticleFilter::particles_initialize() {
+void MAVTrackParticleFilter::particles_initialize() {
     ZoneScoped;
     // initialize particles and weights
     weights.clear();
@@ -175,7 +175,7 @@ void UAVTrackParticleFilter::particles_initialize() {
     particles_initialized = true;
 }
 
-void UAVTrackParticleFilter::init_markers() {
+void MAVTrackParticleFilter::init_markers() {
     ZoneScoped;
     // Initialize visualization markers. Will get called automatically when needed.
     particle_marker.header.frame_id = frame;
@@ -208,7 +208,7 @@ void UAVTrackParticleFilter::init_markers() {
     markers_initialized = true;
 }
 
-visualization_msgs::Marker UAVTrackParticleFilter::getParticleMarker() {
+visualization_msgs::Marker MAVTrackParticleFilter::getParticleMarker() {
     ZoneScoped;
     if (!markers_initialized) {
         init_markers();
@@ -221,7 +221,7 @@ visualization_msgs::Marker UAVTrackParticleFilter::getParticleMarker() {
     return particle_marker;
 }
 
-void UAVTrackParticleFilter::particles_predict() {
+void MAVTrackParticleFilter::particles_predict() {
     ZoneScoped;
     // Predict step: apply noise to account for uncertainty in system state (no process or motion model except that)
     std::random_device rd;
@@ -340,7 +340,7 @@ void UAVTrackParticleFilter::particles_predict() {
     particle_timestamp = ros::Time::now();
 }
 
-float UAVTrackParticleFilter::normal_pdf(const float& mean, const float& std, const float& x) {
+float MAVTrackParticleFilter::normal_pdf(const float& mean, const float& std, const float& x) {
     ZoneScoped;
     // Source: https://stackoverflow.com/questions/10847007/using-the-gaussian-probability-density-function-in-c
     static const float inv_sqrt_2pi = 0.3989422804014327;
@@ -348,7 +348,7 @@ float UAVTrackParticleFilter::normal_pdf(const float& mean, const float& std, co
     return inv_sqrt_2pi / std * std::exp(-0.5f * a * a);
 }
 
-void UAVTrackParticleFilter::particles_update(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) {
+void MAVTrackParticleFilter::particles_update(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) {
     ZoneScoped;
     // Update step: update weights using measurements
     double weight_sum = 0.0;
@@ -386,7 +386,7 @@ void UAVTrackParticleFilter::particles_update(pcl::PointCloud<pcl::PointXYZ>::Pt
     particles_resample();
 }
 
-void UAVTrackParticleFilter::particles_estimate_usemean() {   
+void MAVTrackParticleFilter::particles_estimate_usemean() {   
     ZoneScoped;
     // calculate the mean of particle positions as estimate
     double x = 0.0, y = 0.0, z = 0.0;
@@ -461,29 +461,29 @@ void UAVTrackParticleFilter::particles_estimate_usemean() {
     last_position_estimate.z = position_estimate.z;
 
     // Time  
-    uav_pose_marker.header.stamp = particle_timestamp;
+    mav_pose_marker.header.stamp = particle_timestamp;
 
     // Update marker
-    uav_pose_marker.points[0].x = position_estimate.x;
-    uav_pose_marker.points[0].y = position_estimate.y;
-    uav_pose_marker.points[0].z = position_estimate.z;
-    uav_pose_marker.points[1].x = position_estimate.x + velocity_estimate.x;
-    uav_pose_marker.points[1].y = position_estimate.y + velocity_estimate.y;
-    uav_pose_marker.points[1].z = position_estimate.z + velocity_estimate.z;
+    mav_pose_marker.points[0].x = position_estimate.x;
+    mav_pose_marker.points[0].y = position_estimate.y;
+    mav_pose_marker.points[0].z = position_estimate.z;
+    mav_pose_marker.points[1].x = position_estimate.x + velocity_estimate.x;
+    mav_pose_marker.points[1].y = position_estimate.y + velocity_estimate.y;
+    mav_pose_marker.points[1].z = position_estimate.z + velocity_estimate.z;
 }
 
-visualization_msgs::Marker UAVTrackParticleFilter::getEstimate() {
+visualization_msgs::Marker MAVTrackParticleFilter::getEstimate() {
     ZoneScoped;
     particles_estimate_usemean();
-    return uav_pose_marker;
+    return mav_pose_marker;
 }
 
-void UAVTrackParticleFilter::particles_resample() {
+void MAVTrackParticleFilter::particles_resample() {
     ZoneScoped;
     // set distribution of particle weights
     std::discrete_distribution<int> d(weights.begin(), weights.end());
     // initiate new particle vector
-    std::vector<UAVTrackParticle> particle_new;
+    std::vector<MAVTrackParticle> particle_new;
     particle_new.reserve(particle.size());
     // sample random new particles according to weight distribution
     std::random_device rd;
@@ -495,7 +495,7 @@ void UAVTrackParticleFilter::particles_resample() {
     particle = particle_new;
 }
 
-bool UAVTrackParticleFilter::get_is_tracked() {
+bool MAVTrackParticleFilter::get_is_tracked() {
     ZoneScoped;
     return is_tracked;
 }

@@ -214,9 +214,11 @@ bool OctomapBackgroundBuilder::buildOctoMapCallback(
         if (buffer_copy.size() > frames_added) {
             while (frames_added < buffer_copy.size()) {
                 sensor_msgs::PointCloud2::ConstPtr msg = buffer_copy[frames_added];
-
-                if (!transform_listener.waitForTransform(frame, msg->header.frame_id, msg->header.stamp, ros::Duration(2.0))) {
+                std::string error_msg;
+                std::string* error_msg_ptr = &error_msg;
+                if (!transform_listener.waitForTransform(frame, msg->header.frame_id, msg->header.stamp, ros::Duration(2.0), ros::Duration(0.01),error_msg_ptr)) {
                     ROS_WARN_STREAM("Was not able to lookup transform from [" << msg->header.frame_id << "] to [" << frame << "].");
+                    ROS_WARN_STREAM("Transform error: " << *error_msg_ptr);
                     // // turn off flag
                     // {
                     //     std::lock_guard<std::mutex> lock(build_mutex);
@@ -231,7 +233,7 @@ bool OctomapBackgroundBuilder::buildOctoMapCallback(
                     }
 
                     
-                    continue;
+                    break;
                 }
        
                 octomap::Pointcloud opcl;

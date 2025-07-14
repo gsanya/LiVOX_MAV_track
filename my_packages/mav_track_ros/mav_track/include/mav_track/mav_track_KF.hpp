@@ -18,7 +18,7 @@ enum KFMotionModelType {
   KFConstantTurnRateWithZVelocity = 3,
 };
 
-class UAVTrackKF {
+class MAVTrackKF {
   private:
     // first measurement flag
     bool first_measurement;
@@ -56,12 +56,12 @@ class UAVTrackKF {
     /**
      * Constructor
      */
-    UAVTrackKF();
+    MAVTrackKF();
 
     /**
      * Destructor
      */
-    virtual ~UAVTrackKF();
+    virtual ~MAVTrackKF();
 
     /**
      * Init Initializes Kalman filter

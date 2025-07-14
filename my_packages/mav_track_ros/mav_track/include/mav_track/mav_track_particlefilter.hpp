@@ -17,7 +17,7 @@ enum PFMotionModelType {
   ConstantTurnRateWithZVelocity = 4
 };
 
-class UAVTrackParticle {
+class MAVTrackParticle {
   public:
     geometry_msgs::Point position;
     //could be a vector of past positions, then more accurate velocity estimation could be given
@@ -26,18 +26,18 @@ class UAVTrackParticle {
     geometry_msgs::Point acceleration;
     double weight;
 
-    UAVTrackParticle();
-    UAVTrackParticle(geometry_msgs::Point position,geometry_msgs::Point velocity, double weight);
+    MAVTrackParticle();
+    MAVTrackParticle(geometry_msgs::Point position,geometry_msgs::Point velocity, double weight);
 };
 
-class UAVTrackParticleFilter {
+class MAVTrackParticleFilter {
   private:
 
     PFMotionModelType motion_model_type;
 
     // System
     ros::Time particle_timestamp;
-    std::vector<UAVTrackParticle> particle;
+    std::vector<MAVTrackParticle> particle;
     std::vector<double> weights;
     bool particles_initialized;
     visualization_msgs::Marker particle_marker;
@@ -48,7 +48,7 @@ class UAVTrackParticleFilter {
     // std::vector<geometry_msgs::Point> position_estimate_history;
     // int position_estimate_history_size;
     geometry_msgs::Point velocity_estimate;
-    visualization_msgs::Marker uav_pose_marker;
+    visualization_msgs::Marker mav_pose_marker;
     double av_std_pos;
 
     // Parameters
@@ -63,8 +63,8 @@ class UAVTrackParticleFilter {
 
   public:
     // Constructor and Destructor
-    UAVTrackParticleFilter();
-    ~UAVTrackParticleFilter();
+    MAVTrackParticleFilter();
+    ~MAVTrackParticleFilter();
     // Setters
     void set_motion_model_type(
     	PFMotionModelType motion_model_type,

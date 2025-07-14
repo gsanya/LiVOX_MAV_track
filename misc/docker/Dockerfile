@@ -98,7 +98,12 @@ RUN mkdir -p /home/appuser/livox_mav_track/thirdparty && \
     cd /home/appuser/livox_mav_track/thirdparty && \
     git clone https://github.com/wolfpld/tracy.git && \
     cd tracy && \
-    git checkout v0.11.1
+    git checkout v0.11.1 && \
+    cmake -B profiler/build -S profiler -DCMAKE_BUILD_TYPE=Release -DLEGACY=1 -DCMAKE_EXE_LINKER_FLAGS="-Wl,--no-as-needed -ldl -pthread -ltbb" && \
+    cmake --build profiler/build --config Release --parallel && \
+    cmake -B capture/build -S capture -DCMAKE_BUILD_TYPE=Release -DLEGACY=1 -DCMAKE_EXE_LINKER_FLAGS="-Wl,--no-as-needed -ldl -pthread -ltbb" && \
+    cmake --build capture/build --config Release --parallel
+
 
 #install vscode server and extensions inside the container
 #it propably won't work on computers of others because of the specific vscode version
@@ -117,16 +122,36 @@ USER appuser
 ARG VSCODE_COMMIT_HASH
 RUN bash /home/appuser/livox_mav_track/.devcontainer/preinstall_vscode.sh $VSCODE_COMMIT_HASH /home/appuser/livox_mav_track/.devcontainer/devcontainer.json
 
-# copy my_packages
-COPY --chown=appuser:appuser ./my_packages/ /home/appuser/livox_mav_track/src/my_packages/
-
 # clone LiVOX ROS: https://github.com/Livox-SDK/livox_ros_driver
 # checkout to specific version with it worked for sure
 USER appuser
-RUN cd /home/appuser/livox_mav_track/src && \
+RUN mkdir -p /home/appuser/livox_mav_track/src && \
+    cd /home/appuser/livox_mav_track/src && \
     git clone https://github.com/Livox-SDK/livox_ros_driver.git && \
     cd livox_ros_driver && \
     git checkout v2.6.0 
+
+# install stuff for the scripts
+# install yq
+USER root
+RUN wget https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64 -O /usr/local/bin/yq && \
+    chmod +x /usr/local/bin/yq
+# install apt dependencies for the scripts
+USER root
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive\
+    apt-get install -y\
+    python3-tk
+# install python dependencies for the scripts
+USER appuser
+RUN python3 -m pip install \
+    matplotlib==3.7.5 \
+    numpy==1.21 \
+    pandas==2.0.3 \
+    seaborn==0.13.2
+
+# copy my_packages
+COPY --chown=appuser:appuser ./my_packages/ /home/appuser/livox_mav_track/src/my_packages/
 
 # install livox_mav_track
 USER appuser

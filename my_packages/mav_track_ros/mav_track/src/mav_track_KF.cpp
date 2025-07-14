@@ -16,11 +16,11 @@
  *   VectorXd or MatrixXd objects with zeros upon creation.
  */
 
-UAVTrackKF::UAVTrackKF() {}
+MAVTrackKF::MAVTrackKF() {}
 
-UAVTrackKF::~UAVTrackKF() {}
+MAVTrackKF::~MAVTrackKF() {}
 
-void UAVTrackKF::init(
+void MAVTrackKF::init(
         Eigen::VectorXd &x_in,
         Eigen:: MatrixXd &P_in,
         Eigen::MatrixXd &F_in,
@@ -44,7 +44,7 @@ void UAVTrackKF::init(
     this->dogru_use_min_search_radius = dogru_use_min_search_radius;
 }
 
-void UAVTrackKF::predictEKF(float delta_T) {
+void MAVTrackKF::predictEKF(float delta_T) {
     ZoneScoped;
     // input state values (not all of them are used in all models)
     double x, y, z, v_x, v_y, v_z, v, yaw, yawd;
@@ -198,7 +198,7 @@ void UAVTrackKF::predictEKF(float delta_T) {
     }
 }
 
-void UAVTrackKF::update(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) {
+void MAVTrackKF::update(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) {
     ZoneScoped;
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>);
@@ -229,7 +229,7 @@ void UAVTrackKF::update(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) {
     P_ = (I - K * H_) * P_;
 }
 
-void UAVTrackKF::getCloudCentroid(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_in, Eigen::VectorXd& center) {
+void MAVTrackKF::getCloudCentroid(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_in, Eigen::VectorXd& center) {
     ZoneScoped;
     if (cloud_in->size() > 0) {
         int n = cloud_in->size();
@@ -246,12 +246,12 @@ void UAVTrackKF::getCloudCentroid(const pcl::PointCloud<pcl::PointXYZ>::Ptr& clo
     }
 }
 
-bool UAVTrackKF::is_first_measurement() {
+bool MAVTrackKF::is_first_measurement() {
     ZoneScoped;
     return first_measurement;
 }
 
-void UAVTrackKF::set_first_measurement(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) {
+void MAVTrackKF::set_first_measurement(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud) {
     ZoneScoped;
     // get the centroid of the point cloud
     Eigen::VectorXd position = Eigen::VectorXd(3);
@@ -271,7 +271,7 @@ void UAVTrackKF::set_first_measurement(pcl::PointCloud<pcl::PointXYZ>::Ptr& clou
     first_measurement = false;
 }
 
-void UAVTrackKF::check_with_KDTree(
+void MAVTrackKF::check_with_KDTree(
         const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_in,
         pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud_out) {
     ZoneScoped;
@@ -313,15 +313,15 @@ void UAVTrackKF::check_with_KDTree(
     }
 }
 
-visualization_msgs::Marker UAVTrackKF::getEstimate() {
+visualization_msgs::Marker MAVTrackKF::getEstimate() {
     ZoneScoped;
-    visualization_msgs::Marker uav_pose_marker;
+    visualization_msgs::Marker mav_pose_marker;
 
-    uav_pose_marker.header.frame_id = frame;
-    uav_pose_marker.type = visualization_msgs::Marker::ARROW;
-    uav_pose_marker.action = visualization_msgs::Marker::ADD;
+    mav_pose_marker.header.frame_id = frame;
+    mav_pose_marker.type = visualization_msgs::Marker::ARROW;
+    mav_pose_marker.action = visualization_msgs::Marker::ADD;
 
-    uav_pose_marker.points.resize(2);
+    mav_pose_marker.points.resize(2);
     double x, y, z, v, yaw, yaw_rate, v_x, v_y, v_z;
 
     switch (motion_model_type) {
@@ -360,26 +360,26 @@ visualization_msgs::Marker UAVTrackKF::getEstimate() {
             ROS_ERROR_STREAM("Unknown KF motion model type");
     }
 
-    uav_pose_marker.points[0].x = x;
-    uav_pose_marker.points[0].y = y;
-    uav_pose_marker.points[0].z = z;
-    uav_pose_marker.points[1].x = x + v_x;
-    uav_pose_marker.points[1].y = y + v_y;
-    uav_pose_marker.points[1].z = z + v_z;
+    mav_pose_marker.points[0].x = x;
+    mav_pose_marker.points[0].y = y;
+    mav_pose_marker.points[0].z = z;
+    mav_pose_marker.points[1].x = x + v_x;
+    mav_pose_marker.points[1].y = y + v_y;
+    mav_pose_marker.points[1].z = z + v_z;
 
-    uav_pose_marker.scale.x = 0.1;
-    uav_pose_marker.scale.y = 0.1;
-    uav_pose_marker.scale.z = 0.1;
-    uav_pose_marker.color.r = 1.0;
-    uav_pose_marker.color.a = 0.0;
+    mav_pose_marker.scale.x = 0.1;
+    mav_pose_marker.scale.y = 0.1;
+    mav_pose_marker.scale.z = 0.1;
+    mav_pose_marker.color.r = 1.0;
+    mav_pose_marker.color.a = 0.0;
 
     // Set time
-    uav_pose_marker.header.stamp = ros::Time::now();
+    mav_pose_marker.header.stamp = ros::Time::now();
 
-    return uav_pose_marker;
+    return mav_pose_marker;
 }
 
-bool UAVTrackKF::get_is_tracked() {
+bool MAVTrackKF::get_is_tracked() {
     ZoneScoped;
     if (first_measurement) {
         return false;
